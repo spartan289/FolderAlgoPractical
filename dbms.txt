@@ -1,0 +1,158 @@
+Create Suppliers and Parts relational database schema as follows:
+Name                Attributes
+Supplier            SNo, SName, Status, City
+Parts               PNo, PName, Colour, Weight, City
+Project             JNo, JName, City
+Shipment            SNo, PNo, JNo, Quantity
+
+Identify Primary key and Referential Integrity Constraints. Fill in the appropriate data in the tables. 
+
+Primary key: SNo, PNo, JNo
+Referential Integrity: SNo, PNo, JNo
+
+
+Perform the following queries:-
+5. For each shipment get full shipment details, including total shipment weight.
+
+Select SNo, PNo, JNo, Quantity, PName, JName, SName, Colour, Weight, City from Shipment, Parts, Project, Supplier where Shipment.PNo = Parts.PNo and Shipment.JNo = Project.JNo and Project.SNo = Supplier.SNo;
+
+
+22.Get colors of parts supplied by a supplier (say, S1).
+
+Select P.Colour from Parts P, Shipment S where S.PNo = P.PNo and S.SNo = 'S1';
+
+23.Get project numbers for projects using at least one part available from a supplier (say, S1).
+
+Select Jno from Shipment where PNo in (Select Pno from Shipment where SNo = 'S1');
+
+24.Get supplier numbers for suppliers who supply at least one red part.
+
+Select Sno from Shipment where Pno in (Select Pno from Parts where colour='Red');
+
+25.Get  supplier  numbers  for  suppliers  supplying  at  least  one  part  supplied  by  at  least  one  supplier  who supplies at least one red part.
+
+    select distinct Sno from Shipment 
+    where Pno in( select distinct Pno from Shipment 
+    where Sno in(select distinct Shipment.Sno from Shipment,Parts
+    where Parts.color = 'Red'and Shipment.Pno = Parts.Pno));
+
+26.Get supplier numbers for suppliers with status lower than that of a supplier (say S1).
+
+Select Sno from Supplier where Status < (Select Status from Supplier where Sno='S1' );
+
+27.Get projects numbers & names for projects whose city is first in the alphabetic list of all such cities.
+
+Select Jno,Jname from project where city = (select min(city) from project);
+
+28.Get projects numbers for projects supplied with part P1 in an average quantity greater than the greatest quantity in which any part is supplied to project J1.
+
+Select jno from project where (Select Avg(quantity) from Shipment where Shipment.jno=Project.jno and Shipment.Pno = 'P1') > (Select max(quantity) from Shipment where Shipment.jno='J1');
+
+29.Get supplier numbers for supplier supplying some project with part P1 in a quantity greater than the average shipment quantity of part P1 for that project. 
+
+*/
+
+30.Get project numbers for projects not supplied with any red part by any London supplier.
+
+Select Jno from Project where Not exists (Select * from Shipment, Parts, Supplier
+where Shipment.Jno = Project.Jno 
+and Shipment.Sno = Supplier.Sno 
+and Supplier.City = 'London'
+and Shipment.Pno = Parts.Pno
+and Parts.color = 'Red');
+)
+
+
+31.Get project numbers for projects supplied entirely by supplier  S1.
+
+
+SELECT jno
+FROM   Project
+WHERE  NOT EXISTS (
+              SELECT *
+              FROM   Shipment
+              WHERE  Shipment.jno = project.jno
+              AND    sno <> 'S1');
+
+32.Get part numbers for parts supplied to all projects in London.
+
+Select Pno from Shipment where Jno in (Select Jno from Project where City = 'London');
+
+SELECT pno FROM   Parts
+WHERE  NOT EXISTS (
+           SELECT *  FROM   Project
+           WHERE  city = 'London'
+           AND  NOT EXISTS (
+                    SELECT *  FROM   Shipment
+                    WHERE  shipment.pno = parts.pno
+                    AND    shipment.jno= project.jno));
+
+33.Get supplier numbers for suppliers who supply the same part to all projects.
+
+SELECT Sno  FROM Supplier WHERE EXISTS (
+     SELECT *  FROM  Parts  
+     WHERE NOT EXISTS (
+           SELECT *  FROM   Project
+           WHERE NOT EXISTS (
+                 SELECT *  FROM   Shipment
+                 WHERE shipment.jno = Project.jno
+                 AND   shipment.pno = parts.pno
+                 AND   shipment.sno = Supplier.sno)));
+
+34.Get project numbers for projects supplied with at least all parts available from supplier S1.
+
+35.Get all cities in which at least one supplier, part or project is located.
+36.Get part numbers for parts that are supplied either by a London supplier or to a London Project.
+
+
+37.Get supplier number/part number pairs such that the indicated supplier does not supply the indicated part.
+
+SELECT snum, pnum
+FROM   S, P
+WHERE NOT EXISTS (SELECT *
+                  FROM   SPJ
+                  WHERE  spj.snum = s.snum
+                  AND    spj.pnum = p.pnum)
+ORDER BY snum,pnum;
+38.Get all pairs of supplier numbers,  Sx  & Sy  say, such that  Sx &  Sy supply exactly the same  set of parts each.
+
+SELECT Sx.SNo, Sy.SNo
+FROM Supplier Sx, Supplier Sy
+WHERE Sx.Sno > Sy.sno
+AND NOT EXISTS (SELECT PNo FROM Parts P
+                  WHERE EXISTS (SELECT * FROM Shipment SPJ
+                                WHERE spj.pno = p.pno
+                                AND spj.sno = SX.sno)
+                  AND NOT EXISTS (SELECT * FROM Shipment SPJ
+                                WHERE spj.pno = p.pno
+                                AND spj.sno = Sy.sno))
+AND NOT EXISTS (SELECT PNo FROM Parts P
+                  WHERE EXISTS (SELECT * FROM Shipment SPJ
+                                WHERE spj.pno = p.pno
+                                AND spj.sno = sy.sno)
+                  AND NOT EXISTS (SELECT * FROM Shipment SPJ
+                                WHERE spj.pno = p.pno
+                                AND spj.sno = sx.sno));
+
+
+39.Get a “grouped” version of all shipments showing, for each supplier-number and part-number pair, the corresponding project numbers & quantities.
+
+
+
+40.Get supplier names for suppliers who supply all parts.
+
+SELECT
+  S.sno
+FROM  supplier S
+WHERE NOT EXISTS (
+  SELECT  
+    P.pno
+  FROM parts P
+  WHERE NOT EXISTS (
+    SELECT  
+     spj.sno
+    FROM shipment spj
+    WHERE spj.sno = S.sno
+    AND spj.pno = P.pno
+  )
+)
